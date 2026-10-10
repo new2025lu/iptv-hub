@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="家庭 NAS IPTV 直播源聚合与管理控制台">
+  <title>IPTV Hub __APP_VERSION__</title>
+  <link rel="stylesheet" href="/static/app.css?v=20261005q">
+  <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="主导航">
+      <a class="brand" href="#overview" aria-label="IPTV Hub 首页">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 6.8A2.8 2.8 0 0 1 6.8 4h10.4A2.8 2.8 0 0 1 20 6.8v7.4a2.8 2.8 0 0 1-2.8 2.8H6.8A2.8 2.8 0 0 1 4 14.2V6.8Z"/><path d="m9 20 3-3 3 3M9.5 8.5v4l4-2-4-2Z"/></svg>
+        </span>
+        <span><strong>IPTV Hub</strong><small>LIVE DIRECTORY</small></span>
+      </a>
+
+      <nav class="nav-list">
+        <button class="nav-item active" data-view="overview">
+          <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v10h-6zM4 14h6v6H4zM14 18h6v2h-6z"/></svg>
+          <span>概览</span>
+        </button>
+        <button class="nav-item" data-view="channels">
+          <svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h14"/><circle cx="3" cy="6" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="18" r="1"/></svg>
+          <span>频道目录</span>
+        </button>
+        <button class="nav-item" data-view="sources">
+          <svg viewBox="0 0 24 24"><path d="M6 19v-4M12 19V9M18 19V5"/><path d="M3 19h18"/></svg>
+          <span>数据源</span>
+        </button>
+        <button class="nav-item" data-view="history">
+          <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.5"/><path d="M4 4v4.5h4.5M12 8v4l3 2"/></svg>
+          <span>同步记录</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="sync-mini">
+          <span class="pulse-dot" id="syncDot"></span>
+          <div><strong id="syncMiniTitle">等待状态</strong><small id="syncMiniText">正在读取服务</small></div>
+        </div>
+        <button class="icon-button" id="themeButton" aria-label="切换主题" title="切换主题">
+          <svg viewBox="0 0 24 24"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="4"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="mobile-menu icon-button" id="mobileMenu" aria-label="打开导航">
+          <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+        <div>
+          <p class="eyebrow">PRIVATE STREAM DIRECTORY</p>
+          <h1 id="pageTitle">运行概览</h1>
+        </div>
+        <div class="top-actions">
+          <div class="security-state" id="securityState">
+            <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 7.8 7 10 4.2-2.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.7 1.7 3.5-4"/></svg>
+            <span>局域网模式</span>
+          </div>
+          <button class="primary-button" id="syncButton">
+            <svg viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 9A7 7 0 0 1 18.7 7M17.9 15A7 7 0 0 1 5.3 17"/></svg>
+            <span>立即同步</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="view active" id="view-overview">
+        <!-- 源级失效告警：由 app.js 的 renderSourceAlerts() 填充；没有异常时保持空 -->
+        <div id="sourceAlerts"></div>
+        <div class="hero-panel">
+          <div class="hero-copy">
+            <span class="status-label"><i></i> 本地聚合服务</span>
+            <h2>多源聚合，<br><span>一份干净频道表。</span></h2>
+            <p>每日定时同步多个上游，按流指纹去重、按模版归类；失效线路自动剔除、冷却期满自动复活。播放地址直接给出，服务端不代理、不转播、不缓存媒体流；节目单走本机代理，上游令牌不外泄。</p>
+            <div class="hero-links">
+              <button class="secondary-button" data-copy-path="/iptv?region=domestic">国内频道 M3U</button>
+              <button class="secondary-button" data-copy-path="/txt?region=domestic">国内 TXT</button>
+            </div>
+          </div>
+          <div class="signal-visual" aria-hidden="true">
+            <span class="orbit orbit-one"></span>
+            <span class="orbit orbit-two"></span>
+            <span class="orbit orbit-three"></span>
+            <span class="signal-core"><i></i><i></i><i></i></span>
+            <div class="visual-caption"><strong id="visualCount">0</strong><span>去重流地址</span></div>
+          </div>
+        </div>
+
+        <div class="metric-grid" aria-live="polite">
+          <article class="metric"><span>频道</span><strong id="statChannels">—</strong><small>按频道身份合并</small></article>
+          <article class="metric"><span>流地址</span><strong id="statStreams">—</strong><small>URL 与请求头去重</small></article>
+          <article class="metric"><span>国内频道</span><strong id="statDomestic">—</strong><small>可单独导出</small></article>
+          <article class="metric"><span>国外频道</span><strong id="statInternational">—</strong><small>可单独导出</small></article>
+          <article class="metric"><span>原始条目</span><strong id="statEntries">—</strong><small>来自全部激活源</small></article>
+          <article class="metric"><span>收藏</span><strong id="statFavorites">—</strong><small>可单独导出</small></article>
+          <article class="metric"><span>已测线路</span><strong id="statTested">—</strong><small>抽样测速结果</small></article>
+          <article class="metric"><span>失效线路</span><strong id="statDead">—</strong><small>测速不通的条目</small></article>
+          <article class="metric"><span>永久停用</span><strong id="statPurged">—</strong><small>复活后仍失效，季度清理</small></article>
+          <article class="metric"><span>标记中</span><strong id="statFlagged">—</strong><small>累计 3 次后剔除</small></article>
+          <article class="metric"><span>已剔除</span><strong id="statPruned">—</strong><small>已从列表与订阅移除</small></article>
+          <article class="metric"><span>待重测</span><strong id="statBacklog">—</strong><small id="statBacklogHint">测速欠账</small></article>
+        </div>
+
+        <div class="overview-grid">
+          <article class="panel source-overview">
+            <div class="panel-heading"><div><p class="eyebrow">SOURCE PULSE</p><h3>数据源状态</h3></div><button class="text-button" data-go="sources">查看全部</button></div>
+            <div id="sourceSummary" class="source-summary loading-list"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+          </article>
+          <article class="panel run-overview">
+            <div class="panel-heading"><div><p class="eyebrow">LAST RUN</p><h3>最近一次同步</h3></div><button class="text-button" data-go="history">查看全部</button></div>
+            <div id="lastRun" class="source-summary loading-list"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" id="view-channels">
+        <div class="toolbar panel">
+          <label class="search-box">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
+            <input id="searchInput" type="search" placeholder="搜索频道名称或频道 ID" autocomplete="off">
+          </label>
+          <select id="sourceFilter" aria-label="按来源筛选"><option value="">全部来源</option></select>
+          <select id="groupFilter" aria-label="按分组筛选"><option value="">全部分组</option></select>
+          <select id="regionFilter" aria-label="按区域筛选">
+            <option value="">全部区域</option>
+            <option value="domestic">国内频道</option>
+            <option value="international">国外频道</option>
+          </select>
+          <label class="check-filter"><input id="favoriteFilter" type="checkbox"><span>仅看收藏</span></label>
+          <!-- v49 只读清单：这些频道除判死线路外没有任何可用线路。勾选后列表切到
+               /api/dead-channels（另一个只读接口），本行不提供任何破坏性操作。 -->
+          <label class="check-filter" title="只读清单：该频道所有线路都判死（含未测线路的频道不算）。用于决定删源还是补源。">
+            <input id="deadOnlyFilter" type="checkbox"><span>仅看全部线路判死</span>
+          </label>
+          <select id="sortFilter" aria-label="排序方式">
+            <option value="speed" selected>按速度排序（最快在前）</option>
+            <option value="default">默认排序</option>
+            <option value="name">按名称排序</option>
+          </select>
+          <select id="speedScope" aria-label="测速范围">
+            <option value="favorites">测速收藏频道</option>
+            <option value="domestic">测速国内频道</option>
+            <option value="international">测速国外频道</option>
+            <option value="all">测速全部（限量）</option>
+          </select>
+          <select id="speedLimit" aria-label="测速条数">
+            <option value="300">300 条</option>
+            <option value="800">800 条</option>
+            <option value="2000">2000 条</option>
+            <option value="5000">5000 条</option>
+          </select>
+          <button class="secondary-button" id="speedButton"><span>线路测速</span></button>
+          <button class="secondary-button" id="pruneButton"><span>剔除失效线路</span></button>
+          <button class="secondary-button" id="purgeButton" title="每 3 个月自动执行一次：永久停用「复活过、复活后仍然失效」的线路"><span>季度清理</span></button>
+        </div>
+        <div class="table-shell panel">
+          <div class="table-meta"><span id="channelCount">正在读取频道…</span><div>
+            <a class="text-button" href="/iptv?region=domestic" target="_blank">国内 M3U</a>
+            <a class="text-button" href="/txt?region=domestic" target="_blank">国内 TXT</a>
+          </div></div>
+          <div class="channel-table" role="table" aria-label="频道目录">
+            <!-- 表头由 app.js 的 renderChannelHead() 按模式（目录 / 判死清单）重写 -->
+            <div class="channel-row channel-head" role="row" id="channelHead"><span>频道</span><span>分组</span><span>来源</span><span>流数</span><span>速度</span><span>操作</span></div>
+            <div id="channelRows" class="channel-body"><div class="table-loading"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div></div>
+          </div>
+          <div class="pagination"><button class="secondary-button" id="prevPage">上一页</button><span id="pageInfo">第 1 页</span><button class="secondary-button" id="nextPage">下一页</button></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-sources">
+        <div class="section-intro"><div><p class="eyebrow">DATA SOURCES</p><h2>数据源 <span class="count-badge" id="sourceCount">—</span></h2></div><p>仅向白名单内的数据源地址发起条件请求；播放地址不会由服务端访问。手动添加源会先抓取校验，再排队同步与测速。</p></div>
+        <div class="panel subscribe-panel" id="subscribePanel">
+          <div class="panel-heading">
+            <div><p class="eyebrow">SUBSCRIPTIONS</p><h3>分组独立订阅</h3></div>
+            <div class="panel-heading-actions">
+              <button class="secondary-button" data-copy-path="/discovered.m3u">复制发现源 M3U</button>
+              <button class="secondary-button" data-copy-path="/discovered.txt">复制发现源 TXT</button>
+            </div>
+          </div>
+          <small>
+            <strong>发现源的独立订阅</strong>（播放器可直接粘贴，不需要令牌）：
+            <code data-abs-path="/discovered.m3u">/discovered.m3u</code>
+            —— 只输出「发现源」这一组的线路，独立加载它就不会被主订阅里其它线路拖累。
+            地址与内容固定，不受下面这条主订阅配置影响。
+            <span id="mainExcludeHint">主订阅默认包含全部线路；在服务端配置 <code>MAIN_EXCLUDE_GROUP</code>
+            可让主订阅默认排除某一组，此时播放器里的地址一个字都不用改。</span>
+            任意分组都能单独导出：<code>?group=分组名</code>，例如 <code>?group=发现源</code>
+            与上面的独立地址完全等价；<code>?exclude_group=分组名</code> 则临时排除别的组
+            （传空值 = 临时取回全量订阅）。
+          </small>
+        </div>
+        <div class="panel" id="discoverPanel" hidden>
+          <div class="panel-heading">
+            <div><p class="eyebrow">DISCOVERED</p><h3>发现到的候选地址 <span class="count-badge" id="discoverCount">0</span></h3></div>
+            <div class="panel-heading-actions">
+              <button class="secondary-button" id="discoverCheck">检测未验证的</button>
+              <button class="primary-button" id="discoverAdopt">批量入库（仅有效的）</button>
+              <button class="secondary-button" id="discoverRefresh">立即发现</button>
+            </div>
+          </div>
+          <small>只抓取预置的几个索引页；<strong>采用</strong>前服务端不会访问这些地址。采用时会先抓一次校验，通过后放行其主机并排队同步。
+            <strong>批量入库</strong>把所有「检测有效」的候选一次收进来（后台串行、每条间隔 1 秒，进度显示在按钮上）。检测<strong>无效的会被直接删除</strong>、不再显示（30 天内也不会被重新抓回来）。抓取每天 <strong>05:00</strong> 自动跑一轮，已入库、已处理过的地址直接跳过，不会天天重复打扰。</small>
+          <div id="discoverList"></div>
+        </div>
+        <div class="panel add-source-panel">
+          <div class="add-source-head">
+            <h3>手动添加数据源</h3>
+            <small>填地址即可：先抓一次校验有效性，通过后自动排队「同步 → 测速 → 并入总源」</small>
+          </div>
+          <form id="addSourceForm" class="add-source-form" autocomplete="off">
+            <input id="addSourceUrl" type="url" placeholder="https://example.com/live.m3u" required spellcheck="false">
+            <input id="addSourceName" type="text" placeholder="备注名（可选）">
+            <select id="addSourceFormat" aria-label="源格式">
+              <option value="">自动识别</option>
+              <option value="m3u">M3U</option>
+              <option value="json">JSON</option>
+              <option value="tvbox">TVBox 配置</option>
+            </select>
+            <button class="primary-button" type="submit" id="addSourceSubmit">添加并检测</button>
+          </form>
+          <p id="addSourceMsg" class="add-source-msg" hidden></p>
+          <details class="paste-import">
+            <summary>或直接粘贴频道清单（每行「名称,播放地址」，也接受 M3U）</summary>
+            <form id="pasteSourceForm" class="paste-source-form" autocomplete="off">
+              <textarea id="pasteSourceContent" rows="8" spellcheck="false" required
+                placeholder="CCTV-1,http://ucdn.example.com:8089/00/SNM/CHANNEL00000311/index.m3u8&#10;CCTV-2,http://ucdn.example.com:8089/00/SNM/CHANNEL00000317/index.m3u8"></textarea>
+              <div class="paste-source-actions">
+                <input id="pasteSourceName" type="text" placeholder="给这份清单起个名字（必填；同名再导入 = 更新同一个源）" required>
+                <button class="primary-button" type="submit" id="pasteSourceSubmit">导入清单</button>
+              </div>
+            </form>
+            <p id="pasteSourceMsg" class="add-source-msg" hidden></p>
+            <p class="paste-import-note">清单会作为本地源存入 data/inline/，之后与联网源走同一条流水线：同步 → 测速 → 剔除 → 并入订阅。</p>
+          </details>
+        </div>
+        <div id="sourceCards" class="source-groups"><div class="panel skeleton-card"></div><div class="panel skeleton-card"></div></div>
+      </section>
+
+      <section class="view" id="view-history">
+        <div class="section-intro"><div><p class="eyebrow">SYNC LEDGER</p><h2>同步记录</h2></div><div><p>每次抓取的结果、变化量和异常均保留在本地数据库。</p><button id="clearHistory" class="text-button clear-history">清空同步记录</button></div></div>
+        <div class="panel history-panel"><div id="historyList" class="history-list"><div class="skeleton"></div><div class="skeleton"></div></div></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+  <aside class="drawer" id="channelDrawer" aria-hidden="true" aria-label="频道详情">
+    <button class="drawer-close icon-button" id="drawerClose" aria-label="关闭详情">
+      <svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg>
+    </button>
+    <p class="eyebrow">CHANNEL DETAIL</p>
+    <h2 id="drawerTitle">频道详情</h2>
+    <div id="drawerContent" class="drawer-content"></div>
+  </aside>
+
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/static/app.js?v=20261005q" defer></script>
+</body>
+</html>

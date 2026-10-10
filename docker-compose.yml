@@ -1,0 +1,135 @@
+services:
+  iptv-hub:
+    build:
+      context: .
+    image: iptv-hub:local
+    container_name: iptv-hub
+    user: "${PUID:-1000}:${PGID:-1001}"
+    ports:
+      - "${IPTV_PORT:-18787}:8080"
+    environment:
+      TZ: "${TZ:-Asia/Shanghai}"
+      DATA_DIR: /data
+      # glibc 每个线程一个 malloc arena，多线程下大量临时对象会造成明显的内存碎片
+      # （实测并发压测后 RSS 高水位约 550MB）。限制 arena 数量可显著压低高水位。
+      MALLOC_ARENA_MAX: "2"
+      SYNC_HOUR: "${SYNC_HOUR:-4}"
+      SYNC_MINUTE: "${SYNC_MINUTE:-20}"
+      STARTUP_SYNC_DELAY: "${STARTUP_SYNC_DELAY:-8}"
+      REQUEST_TIMEOUT: "${REQUEST_TIMEOUT:-45}"
+      IPTV_ADMIN_TOKEN: "${IPTV_ADMIN_TOKEN:-}"
+      APP_NAME: "${APP_NAME:-IPTV Hub}"
+      # 应用版本号（唯一来源）：页面标题与 /api/meta 的 version 都取它
+      APP_VERSION: "${APP_VERSION:-v6}"
+      AUTO_SPEED_AFTER_SYNC: "${AUTO_SPEED_AFTER_SYNC:-true}"
+      AUTO_SPEED_LIMIT: "${AUTO_SPEED_LIMIT:-1500}"
+      # 自适应预算：按存量与复检周期算日需求（上限 AUTO_SPEED_MAX）。
+      # 固定 1500 条/天只有需求量的 1/11，会让失效线路吃光预算、可用线路长期不复检。
+      AUTO_SPEED_ADAPTIVE: "${AUTO_SPEED_ADAPTIVE:-true}"
+      AUTO_SPEED_MAX: "${AUTO_SPEED_MAX:-20000}"
+      AUTO_SPEED_REGION: "${AUTO_SPEED_REGION:-}"
+      AUTO_PRUNE_AFTER_SPEED: "${AUTO_PRUNE_AFTER_SPEED:-true}"
+      PRUNE_MAX_FAIL: "${PRUNE_MAX_FAIL:-3}"
+      RETEST_AFTER_DAYS: "${RETEST_AFTER_DAYS:-14}"
+      FAIL_RETEST_HOURS: "${FAIL_RETEST_HOURS:-20}"
+      RETEST_OK_HOURS: "${RETEST_OK_HOURS:-72}"
+      # v48 长期失效清理：连续失效满 N 天的条目在每周维护里置 active=0（可恢复，
+      # 每频道保底留 1 条）。0 = 关闭。判据见 .env.example / MERGED-CHANGES v48。
+      AUTO_CLEANUP_DEAD_DAYS: "${AUTO_CLEANUP_DEAD_DAYS:-0}"
+      # 季度清理：复活过又再次失效的线路永久停用（详见 speed.purge_revived_streams）
+      PURGE_INTERVAL_DAYS: "${PURGE_INTERVAL_DAYS:-90}"
+      PURGE_MIN_REVIVE: "${PURGE_MIN_REVIVE:-1}"
+      # 每周维护（同步任务末尾按 7 天节流自动执行，也可 POST /api/maintenance 手动触发）
+      SYNC_RUNS_KEEP: "${SYNC_RUNS_KEEP:-100}"
+      INACTIVE_RETENTION_DAYS: "${INACTIVE_RETENTION_DAYS:-30}"
+      # 频道详情里在主用线路之外额外展示的备选线路条数
+      BACKUP_LINES_SHOWN: "${BACKUP_LINES_SHOWN:-5}"
+      # 多线路订阅/频道详情：每个频道保留的线路条数（央视系频道用 MAX_LINES_CCTV）
+      MAX_LINES_PER_CHANNEL: "${MAX_LINES_PER_CHANNEL:-5}"
+      MAX_LINES_CCTV: "${MAX_LINES_CCTV:-10}"
+      # v42 导出过滤：AUTO_PRUNE_AFTER_SPEED=false 时死线路留在库里继续复检，但不该进订阅。
+      # 非破坏性：只影响导出产物（/iptv、/playlist.m3u、/txt、data/live.m3u|txt），库里一行不动。
+      EXPORT_HIDE_DEAD: "${EXPORT_HIDE_DEAD:-true}"
+      EXPORT_DEAD_FAIL_COUNT: "${EXPORT_DEAD_FAIL_COUNT:-3}"
+      # v52 回放（catch-up）：只给 EXPORT_CATCHUP_SOURCE_SLUGS 里列出的数据源（默认内置源
+      # ysp-live）的线路在 M3U 的 #EXTINF 上补 catchup / catchup-days / catchup-source，
+      # 播放器据此把 EPG 往期节目拼成回看地址。/txt 表达不了属性（保持原样），
+      # /discovered.m3u 里是发现源的线路（不在 slug 列表里，自然不带）。
+      # EXPORT_CATCHUP=0 一键回到改动前（产物逐字节相同），直播播放不受属性影响。
+      EXPORT_CATCHUP: "${EXPORT_CATCHUP:-true}"
+      EXPORT_CATCHUP_SOURCE_SLUGS: "${EXPORT_CATCHUP_SOURCE_SLUGS:-ysp-live}"
+      EXPORT_CATCHUP_DAYS: "${EXPORT_CATCHUP_DAYS:-7}"
+      # 留空 = 用代码内置默认（与 ysp-live 自己 /all.m3u 发布的写法一致）。要换模板请在
+      # .env 里写：以 ? 或 & 开头 = append 模式（拼到频道地址后）；以 http:// 开头 = default
+      # 模式（整条回看地址）。注意 .env/compose 会先做一次变量插值，模板里的 `$` 必须写成
+      # `$$`（如 `$${(b)yyyyMMddHHmmss}`），或改用不含 `$` 的写法（如 `?utc={utc}&lutc={lutc}`）。
+      EXPORT_CATCHUP_SOURCE: "${EXPORT_CATCHUP_SOURCE:-}"
+      # v53 偏好源（逗号分隔的 source_slug）：排在 _line_order 排序键最前面的权重 ——
+      # 这些源的线路在**同一频道内**优先当线路 1（其后仍按速度/稳定性等原键排序），
+      # 目的是让有回看能力的源（默认 ysp-live）拿到频道的主用线路，播放器里的回看入口
+      # 才默认可用。留空 = 行为与 v52 逐字节相同；不改每频道条数上限、不改取数范围。
+      EXPORT_PREFER_SOURCES: "${EXPORT_PREFER_SOURCES:-ysp-live}"
+      # 测速采样：先丢弃 SPEED_WARMUP_BYTES（CDN 边缘预缓冲），只用剩余部分算「持续吞吐」。
+      # 实测某线路开头 512KB 报 2707KB/s、之后只有 450KB/s，不丢预热段会把卡顿线路排到最前。
+      SPEED_WARMUP_BYTES: "${SPEED_WARMUP_BYTES:-524288}"
+      SPEED_SAMPLE_BYTES: "${SPEED_SAMPLE_BYTES:-1048576}"
+      SPEED_TIMEOUT: "${SPEED_TIMEOUT:-5}"
+      SPEED_CONCURRENCY: "${SPEED_CONCURRENCY:-64}"
+      SPEED_MAX_ITEMS: "${SPEED_MAX_ITEMS:-5000}"
+      # 测速目标地址守卫：默认拦截内网/环回/链路本地/保留地址（频道地址来自第三方列表，
+      # 不拦等于开了盲 SSRF）。这里列出的主机是例外，逗号分隔；数据源白名单里的主机自动信任。
+      SPEED_ALLOW_PRIVATE_HOSTS: "${SPEED_ALLOW_PRIVATE_HOSTS:-}"
+      # v57 按主机走代理：只给 SOURCE_PROXY_HOSTS 里列出的主机（含子域）**抓取订阅列表**时走代理，
+      # 其余一律直连；留空 = 全关（行为与改动前逐字节相同）。只影响抓取路径 ——
+      # 测速 / EPG 回源 / 订阅地址发现都不走这里（否则测速结果会失真）。
+      SOURCE_PROXY: "${SOURCE_PROXY:-}"
+      SOURCE_PROXY_HOSTS: "${SOURCE_PROXY_HOSTS:-}"
+      # TVBox 配置地址（逗号分隔）：抓配置 → 取出 lives[].url → 子地址逐个过白名单后按普通源同步。
+      # 配置里新增直播源会自动跟进；未在白名单的子主机不抓取，只在「数据源」页面提示需放行。
+      # 干净无源包修复（2026-10-10）：原值为 "${TVBOX_CONFIGS:-https://9280.kstore.vip/newwex.json}"。
+      # 由于 .env 把 TVBOX_CONFIGS 置空，`:-` 会回退成该默认 URL，启动时又种入一个 TVBox 源，
+      # 与「0 源」承诺相悖。改为空默认后，.env 留空即为 0 源。
+      TVBOX_CONFIGS: "${TVBOX_CONFIGS:-}"
+      # SQLite 临时文件目录：必须落在数据盘，不能放在 64MB 的 /tmp tmpfs 上
+      # （频道列表查询单次峰值临时空间约 23MB，并发几次就会 database or disk is full）
+      SQLITE_TMPDIR: /data/.sqlite-tmp
+      # SQLite mmap 上限：走操作系统页缓存，扫描类查询实测快 1.7~2.1 倍（0=禁用）
+      SQLITE_MMAP_BYTES: "${SQLITE_MMAP_BYTES:-268435456}"
+      # 区域保留策略：domestic=仅保留国内（国外剔除）；international=仅保留国外；空=全部
+      KEEP_REGION: "${KEEP_REGION:-domestic}"
+      # 主订阅默认排除的数据源分组（v43）：留空 = 主订阅含全部线路（老行为）；设为某分组名后，
+      # 不带分组参数的 /iptv、/playlist.m3u、/txt 与静态 data/live.m3u|txt 都排除该组，
+      # 显式传 ?group= / ?exclude_group= 时以参数为准（传空值 = 临时取回全量）。
+      MAIN_EXCLUDE_GROUP: "${MAIN_EXCLUDE_GROUP:-}"
+      # EPG 节目单地址：配置后 M3U 导出带 x-tvg-url，播放器可加载节目单
+      EPG_URL: "${EPG_URL:-}"
+      # 本机 EPG 代理：导出的 M3U 头部指向 {PUBLIC_BASE_URL}/epg.xml，上游令牌不外泄。
+      # 留空则按请求的 Host 推断（播放器用哪个地址拉订阅，就拿回哪个地址的节目单）。
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-}"
+      EPG_PROXY_TTL_HOURS: "${EPG_PROXY_TTL_HOURS:-6}"
+    # v57：让容器用一个**稳定名字**访问宿主机的 clash 代理（mihomo 监听 0.0.0.0:7890）。
+    # 不写死 compose 网桥的网关 IP —— 重建网络后网段可能变化。
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./data:/data
+      # 源码镜像内位于 /app/app，挂载宿主机 app/ 覆盖它，改前端后只需 restart
+      - ./app:/app/app:ro
+    restart: unless-stopped
+    # 由 Docker 注入 tini 作为 PID 1：容器里 PID 1 若是普通程序（uvicorn），
+    # 孤儿进程退出后不会被 wait() 回收，会留下僵尸进程；tini 负责回收。
+    init: true
+    read_only: true
+    tmpfs:
+      # 仅作兜底：SQLite 临时文件已改到 /data，这里给其他临时写入留出余量
+      - /tmp:size=256m,noexec,nosuid
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    stop_grace_period: 20s

@@ -1,0 +1,27 @@
+# —— Python ——
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# —— 本地环境（只提交 .env.example）——
+.env
+
+# —— 运行期数据：SQLite / 导出产物 / EPG 缓存 / 粘贴导入的清单 ——
+data/*
+!data/.gitkeep
+!data/channel-template.txt
+
+# —— 编辑器与系统 ——
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# —— 临时文件与备份快照 ——
+*.bak
+*.bak-*
+*.orig
+*.rej
